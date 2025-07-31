@@ -7,7 +7,7 @@ import { ChatOpenAI } from "@langchain/openai";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { RunnableSequence } from "@langchain/core/runnables";
 import { PineconeStore } from "@langchain/community/vectorstores/pinecone";
-import { pineConeIndex } from "../utils/pinecone-client.js"; // update the path if needed
+import { pineConeIndex } from "./db.js";
 
 // Required for pdfjs-dist
 import { createRequire } from "module";
