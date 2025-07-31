@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import * as pdfjsLib from "pdfjs-dist";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { ChatOpenAI } from "@langchain/openai";
@@ -12,7 +12,7 @@ import { pineConeIndex } from "./db.js";
 // Required for pdfjs-dist
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-pdfjsLib.GlobalWorkerOptions.workerSrc = require("pdfjs-dist/build/pdf.worker.js");
+pdfjsLib.GlobalWorkerOptions.workerSrc = require("pdfjs-dist/legacy/build/pdf.worker.js");
 
 async function extractTextFromPDF(buffer) {
   const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
