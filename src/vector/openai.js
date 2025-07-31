@@ -42,7 +42,7 @@ export async function getResponseWithEmbedding(query, user) {
 
     // 1. Load and parse the PDF
     const pdfPath = path.join(uploadsDir, matchedFile);
-  
+
     if (!fs.existsSync(pdfPath)) {
       throw new Error(`❌ PDF file not found at: ${pdfPath}`);
     }
