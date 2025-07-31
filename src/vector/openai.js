@@ -12,7 +12,7 @@ import { pineConeIndex } from "./db.js";
 // Required for pdfjs-dist
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-pdfjsLib.GlobalWorkerOptions.workerSrc = require("pdfjs-dist/legacy/build/pdf.worker.js");
+// pdfjsLib.GlobalWorkerOptions.workerSrc = require("pdfjs-dist/legacy/build/pdf.worker.js");
 
 async function extractTextFromPDF(buffer) {
   const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
