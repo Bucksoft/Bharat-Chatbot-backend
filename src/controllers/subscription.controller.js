@@ -29,6 +29,7 @@ export async function getSubscription(req, res) {
       subscription: {
         id: subscription._id,
         plan: subscription.planId,
+        user: subscription.userId,
         status: subscription.status,
         startDate: subscription.subscriptionStart,
         endDate: subscription.subscriptionEnd,
