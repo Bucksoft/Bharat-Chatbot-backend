@@ -10,6 +10,9 @@ import { scrapeWebsite } from "../utils/scrapeWebsite.js";
 import ms from "ms";
 
 // Upload file
+import fs from "fs";
+import path from "path";
+
 export async function uploadFiles(req, res) {
   try {
     const { file } = req;
@@ -17,6 +20,7 @@ export async function uploadFiles(req, res) {
     const userId = req.user.id;
 
     if (!file) return res.status(400).json({ msg: "No file uploaded" });
+
     const creditCost = Number(credits_per_unit);
     if (!planId || isNaN(creditCost) || creditCost <= 0) {
       return res.status(400).json({ msg: "Invalid plan ID or credit value" });
@@ -36,7 +40,18 @@ export async function uploadFiles(req, res) {
     if (remainingCredits < creditCost)
       return res.status(403).json({ msg: "Not enough credits" });
 
+    // Ensure uploads folder exists
+    const uploadsPath = path.join(process.cwd(), "uploads");
+    if (!fs.existsSync(uploadsPath)) {
+      fs.mkdirSync(uploadsPath);
+    }
+
     const fileName = `${Date.now()}_${file.originalname.replace(/\s+/g, "_")}`;
+    const filePath = path.join(uploadsPath, fileName);
+
+    // Save file to disk
+    fs.writeFileSync(filePath, file.buffer); // Only works if using multer memoryStorage
+
     const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${fileName}`;
 
     await User.findByIdAndUpdate(userId, {
@@ -58,6 +73,7 @@ export async function uploadFiles(req, res) {
     res.status(500).json({ msg: "Server error during file upload" });
   }
 }
+
 
 // Get all files
 export async function getAllFiles(req, res) {
