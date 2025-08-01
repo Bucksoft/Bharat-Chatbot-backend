@@ -1,43 +1,68 @@
 import { Plan } from "../models/plan.schema.js";
 import User from "../models/user.model.js";
+import mongoose from "mongoose";
 
 export async function getPlans(req, res) {
   try {
-    const plans = await Plan.find();
-    if (!plans) {
-      return res.status(400).json({ msg: "No plans found" });
+    const plans = await Plan.find({ isActive: true }).lean();
+
+    if (!plans || plans.length === 0) {
+      return res.status(404).json({ msg: "No active plans found." });
     }
-    return res.status(200).json(plans);
+
+    return res.status(200).json({ plans });
   } catch (error) {
-    res.status(500).json({ msg: "Error in fetching plan details." });
+    console.error("Error in getPlans:", error);
+    res
+      .status(500)
+      .json({ msg: "Internal server error while fetching plans." });
   }
 }
 
 export async function getPlanById(req, res) {
   try {
     const { id } = req.params;
-    if (!id) {
-      return res.status(400).json({ msg: "Please provide a valid id" });
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ msg: "Invalid plan ID." });
     }
-    const plan = await Plan.findById(id);
+
+    const plan = await Plan.findById(id).lean();
+
     if (!plan) {
-      return res.status(400).json({ msg: "Plan not found" });
+      return res.status(404).json({ msg: "Plan not found." });
     }
-    return res.status(200).json(plan);
+
+    return res.status(200).json({ plan });
   } catch (error) {
-    res.status(500).json({ msg: "Error in fetching plan detail." });
+    console.error("Error in getPlanById:", error);
+    res
+      .status(500)
+      .json({ msg: "Internal server error while fetching the plan." });
   }
 }
 
 export async function getMyPlans(req, res) {
   try {
-    const userPlan = await User.findById(req.user.id).populate("activePlan");
-    if (!userPlan) {
-      return res.status(400).json({ msg: "No active user plan found" });
+    const userId = req.user?.id;
+
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(401).json({ msg: "Unauthorized: Invalid user ID." });
     }
-    return res.status(200).json(userPlan);
+
+    const user = await User.findById(userId).populate("activePlan").lean();
+
+    if (!user || !user.activePlan) {
+      return res
+        .status(404)
+        .json({ msg: "No active plan found for the user." });
+    }
+
+    return res.status(200).json({ plan: user.activePlan });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ msg: "Error in fetching plan detail.", error });
+    console.error("Error in getMyPlans:", error);
+    res
+      .status(500)
+      .json({ msg: "Internal server error while fetching user plan." });
   }
 }
