@@ -10,9 +10,6 @@ import { scrapeWebsite } from "../utils/scrapeWebsite.js";
 import ms from "ms";
 
 // Upload file
-import fs from "fs";
-import path from "path";
-
 export async function uploadFiles(req, res) {
   try {
     const { file } = req;
