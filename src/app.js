@@ -25,9 +25,9 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: [
+      "https://bharatchatbot.onrender.com",
       "http://localhost:5173",
       "http://localhost:5174",
-      "https://bharatchatbot.onrender.com",
     ],
     credentials: true,
   })
