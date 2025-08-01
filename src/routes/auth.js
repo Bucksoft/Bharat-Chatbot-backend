@@ -79,6 +79,8 @@ router.get("/callback", async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true,
+      secure: true,
+      sameSite: "None",
       maxAge: 24 * 60 * 60 * 1000,
     });
     // req.session.user = user;
@@ -91,7 +93,7 @@ router.get("/callback", async (req, res) => {
 
 router.get("/logout", (req, res) => {
   try {
-    req.session = null;
+    res.clearCookie("token");
     return res.status(200).json({ msg: "Logged out successfully" });
   } catch (error) {
     return res.status(500).json({ msg: "Logout failed" });

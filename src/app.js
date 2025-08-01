@@ -22,6 +22,7 @@ const __dirname = path.dirname(__filename);
 
 app.use(express.json());
 app.use(cookieParser());
+app.options("*", cors());
 app.use(
   cors({
     origin: [
