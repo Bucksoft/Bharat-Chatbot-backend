@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 
 export async function getPlans(req, res) {
   try {
-    const plans = await Plan.find({ isActive: true }).lean();
+    const plans = await Plan.find({ isActive: true });
 
     if (!plans || plans.length === 0) {
       return res.status(404).json({ msg: "No active plans found." });
