@@ -5,10 +5,13 @@ const subscriptionSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      required: true,
+      index: true,
     },
     planId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Plan",
+      required: true,
     },
     subscriptionStart: {
       type: Date,
@@ -16,15 +19,17 @@ const subscriptionSchema = new mongoose.Schema(
     },
     subscriptionEnd: {
       type: Date,
-      default: Date.now,
+      required: true,
     },
     totalCredits: {
       type: Number,
       required: true,
+      min: [0, "Total credits must be >= 0"],
     },
     creditsUsed: {
       type: Number,
       default: 0,
+      min: [0, "Credits used must be >= 0"],
     },
     status: {
       type: String,
@@ -32,41 +37,31 @@ const subscriptionSchema = new mongoose.Schema(
       default: "active",
     },
     paymentInfo: {
-      transactionId: String,
-      paymentGateway: String,
-      paidOn: Date,
-      amountPaid: Number,
+      transactionId: { type: String, default: null },
+      paymentGateway: { type: String, default: null },
+      paidOn: { type: Date, default: null },
+      amountPaid: { type: Number, default: null },
     },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
+// Virtual field: creditsLeft
 subscriptionSchema.virtual("creditsLeft").get(function () {
-  return this.totalCredits - this.creditsUsed;
+  return Math.max(this.totalCredits - this.creditsUsed, 0);
 });
 
+// Optional: Auto-expire subscription check logic
+// Can be used in a cron job or scheduler
+subscriptionSchema.statics.expireOldSubscriptions = async function () {
+  const result = await this.updateMany(
+    {
+      subscriptionEnd: { $lt: new Date() },
+      status: "active",
+    },
+    { $set: { status: "expired" } }
+  );
+  return result.modifiedCount;
+};
+
 export const Subscription = mongoose.model("Subscription", subscriptionSchema);
-
-// Run daily
-// await UserSubscription.updateMany(
-//   { subscriptionEnd: { $lt: new Date() }, status: "active" },
-//   { $set: { status: "expired" } }
-// );
-
-// server/cron/expireSubscriptions.js
-// import cron from 'node-cron';
-// import UserSubscription from '../models/UserSubscription.js';
-
-// // Runs every day at 12:00 AM
-// cron.schedule('0 0 * * *', async () => {
-//   console.log("⏰ Running daily subscription expiry job...");
-//   try {
-//     const result = await UserSubscription.updateMany(
-//       { subscriptionEnd: { $lt: new Date() }, status: "active" },
-//       { $set: { status: "expired" } }
-//     );
-//     console.log(`✅ Updated ${result.modifiedCount} expired subscriptions.`);
-//   } catch (err) {
-//     console.error("❌ CRON Job Failed:", err.message);
-//   }
-// });
