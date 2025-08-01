@@ -14,6 +14,7 @@ export async function getSubscription(req, res) {
       status: "active",
     })
       .populate("planId")
+      .populate("userId")
       .sort({ subscriptionEnd: -1 });
 
     if (!subscription) {
