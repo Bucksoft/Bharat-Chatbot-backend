@@ -1,42 +1,45 @@
 import { razorpay } from "../lib/razorpay.js";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import { Api } from "../models/api.model.js";
 import ms from "ms";
+
+import { Api } from "../models/api.model.js";
 import User from "../models/user.model.js";
 import { Subscription } from "../models/subscription.model.js";
 import { Plan } from "../models/plan.schema.js";
 
+// Create Razorpay Order
 export async function createOrders(req, res) {
   try {
     const { amount, currency } = req.body;
 
     if (!amount || !currency) {
-      return res.status(400).json({ msg: "Invalid request parameters" });
+      return res.status(400).json({ msg: "Amount and currency are required" });
     }
 
     const options = {
-      amount: amount,
-      currency: currency,
-      receipt: `receipt-${Date.now()}`,
+      amount,
+      currency,
+      receipt: `receipt_${Date.now()}`,
     };
 
     const order = await razorpay.orders.create(options);
-    return res.status(200).json({
+
+    return res.status(201).json({
       success: true,
       orderId: order.id,
     });
   } catch (error) {
-    console.log("Failed to create order ", error);
-    res
-      .status(500)
-      .json({ msg: "Failed to create order", error: error.message });
+    console.error("Failed to create Razorpay order:", error);
+    return res.status(500).json({
+      success: false,
+      msg: "Unable to create order",
+      error: error.message,
+    });
   }
 }
 
-
-
-// verify Order
+// Verify Razorpay Order & Create API Key, Subscription
 export async function verifyOrder(req, res) {
   try {
     const {
@@ -49,63 +52,70 @@ export async function verifyOrder(req, res) {
       planCredits,
       price,
     } = req.body;
-    if (!orderId || !razorpayPaymentId || !razorpaySignature) {
-      return res.status(400).json({ msg: "Invalid request parameters" });
+
+    // Input validation
+    if (
+      !orderId ||
+      !razorpayPaymentId ||
+      !razorpaySignature ||
+      !planType ||
+      !userId ||
+      !planId ||
+      !planCredits ||
+      !price
+    ) {
+      return res.status(400).json({ msg: "Missing required parameters" });
     }
 
-    const generatedSignature = crypto
-      .createHmac("sha256", String(process.env.RAZORPAY_KEY_SECRET))
+    // Validate Razorpay signature
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(`${orderId}|${razorpayPaymentId}`)
       .digest("hex");
 
-    if (generatedSignature !== razorpaySignature) {
-      return res.status(403).json({
-        msg: "Payment verification failed",
-      });
+    if (expectedSignature !== razorpaySignature) {
+      return res.status(403).json({ msg: "Invalid Razorpay signature" });
     }
 
+    // Determine plan expiry
     const planDurations = {
       free: "7d",
       pro: "30d",
       enterprise: "90d",
     };
 
-    const planExpiry = planDurations[planType.toLowerCase()];
-    if (!planExpiry) {
-      return res.status(400).json({ msg: "Invalid plan type" });
+    const planKey = planType.toLowerCase();
+    const planExpiryDuration = planDurations[planKey];
+
+    if (!planExpiryDuration) {
+      return res.status(400).json({ msg: "Invalid plan type provided" });
     }
-    const tokenPayload = {
-      userId,
-      planType,
-      orderId,
-    };
+
+    const expiryDate = new Date(Date.now() + ms(planExpiryDuration));
+
+    // Create signed API key
+    const tokenPayload = { userId, planType, orderId };
     const apiKey = jwt.sign(tokenPayload, process.env.API_KEY_SECRET, {
-      expiresIn: planExpiry,
+      expiresIn: planExpiryDuration,
     });
 
-    const expiryDate = new Date(Date.now() + ms(planExpiry));
-
-    // save the apiKey in the user db
-    const key = await Api.create({
+    // Save API key to DB
+    const savedApiKey = await Api.create({
       name: `${planType}-plan`,
       key: apiKey,
       expiresIn: expiryDate,
       createdBy: userId,
     });
 
-    // update user with the api key and active plan set to planId
+    // Update User: Add API key and activate plan
     await User.findByIdAndUpdate(userId, {
-      $push: { apiKeys: key._id },
+      $push: { apiKeys: savedApiKey._id },
       activePlan: planId,
       planExpiresAt: expiryDate,
     });
 
-    // update the plan with active status in the plan model
-    await Plan.findByIdAndUpdate(planId, {
-      isActive: true,
-    });
+    await Plan.findByIdAndUpdate(planId, { isActive: true });
 
-    // add a record in the subscription model as well
     const subscription = await Subscription.create({
       userId,
       planId,
@@ -124,15 +134,17 @@ export async function verifyOrder(req, res) {
 
     return res.status(200).json({
       success: true,
-      msg: "Payment verification successfull",
-      key,
-      planExpiry,
+      msg: "Payment verified successfully",
+      apiKey: savedApiKey,
       subscription,
+      expiresAt: expiryDate,
     });
   } catch (error) {
-    console.log("Failed to verify order : ", error);
-    res
-      .status(500)
-      .json({ msg: "Failed to verify order", error: error.message });
+    console.error("Order verification failed:", error);
+    return res.status(500).json({
+      success: false,
+      msg: "Order verification failed",
+      error: error.message,
+    });
   }
 }
