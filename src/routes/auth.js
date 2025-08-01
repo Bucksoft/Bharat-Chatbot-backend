@@ -14,7 +14,8 @@ router.get("/", (req, res) => {
       "https://accounts.google.com/o/oauth2/v2/auth?" +
       new URLSearchParams({
         client_id: process.env.GOOGLE_CLIENT_ID,
-        redirect_uri: "https://bharatchatbot.onrender.com/auth/google/callback",
+        redirect_uri:
+          "https://bharat-chatbot-backend.onrender.com/auth/google/callback",
         response_type: "code",
         scope: "profile email",
         access_type: "offline",
