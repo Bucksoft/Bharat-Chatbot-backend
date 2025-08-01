@@ -84,9 +84,7 @@ router.get("/callback", async (req, res) => {
       sameSite: "None",
       maxAge: 24 * 60 * 60 * 1000,
     });
-    res.redirect(
-      "https://bharat-chatbot-backend.onrender.com/dashboard/pricing"
-    );
+    res.redirect("https://bharatchatbot.onrender.com/dashboard/pricing");
   } catch (error) {
     console.log("ERROR IN AUTHENTICATING USER : ", error);
     return res.status(500).json({ msg: "Authentication failed" });
