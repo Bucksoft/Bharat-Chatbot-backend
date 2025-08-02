@@ -1,6 +1,8 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { Plan } from "../models/plan.schema.js";
+import { Subscription } from "../models/subscription.model.js";
 
 // SIGNUP
 export async function signup(req, res) {
