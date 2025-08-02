@@ -24,16 +24,36 @@ export async function signup(req, res) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    
     const newUser = await User.create({
       name,
       email,
       password: hashedPassword,
     });
 
+    
+    const freePlan = await Plan.findOne({ name: "Free" });
+    if (!freePlan) {
+      return res
+        .status(500)
+        .json({ error: "Free plan not found in the database" });
+    }
+
+    
+    await Subscription.create({
+      userId: newUser._id,
+      planId: freePlan._id,
+      subscriptionStart: new Date(),
+      subscriptionEnd:  new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) 
+    });
+
+    newUser.activePlan = freePlan._id;
+    await newUser.save();
+
     const { password: _, ...userWithoutPassword } = newUser.toObject();
 
     return res.status(201).json({
-      message: "Signup successful",
+      message: "Signup successful and free plan activated",
       user: userWithoutPassword,
     });
   } catch (err) {
