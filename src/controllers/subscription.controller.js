@@ -1,51 +1,30 @@
 import { Subscription } from "../models/subscription.model.js";
+
 export async function getSubscription(req, res) {
   try {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Unauthorized access" });
+      return res.status(401).json({ msg: "Unauthorized" });
     }
 
     const subscription = await Subscription.findOne({
       userId,
       status: "active",
     })
+      .sort({ subscriptionStart: -1 })
       .populate("planId")
-      .populate("userId")
-      .sort({ subscriptionEnd: -1 });
+      .populate("userId");
 
-    if (!subscription) {
-      return res.status(404).json({
-        success: false,
-        message: "No active subscription found",
-      });
+    if (!subscription || !subscription.planId) {
+      return res.status(404).json({ msg: "No active subscription found" });
     }
 
-    res.status(200).json({
-      success: true,
-      subscription: {
-        id: subscription._id,
-        plan: subscription.planId,
-        user: subscription.userId,
-        status: subscription.status,
-        startDate: subscription.subscriptionStart,
-        endDate: subscription.subscriptionEnd,
-        totalCredits: subscription.totalCredits,
-        creditsUsed: subscription.creditsUsed,
-        creditsLeft: subscription.creditsLeft,
-        paymentInfo: subscription.paymentInfo,
-        createdAt: subscription.createdAt,
-      },
-    });
+    res.status(200).json({ subscription });
   } catch (error) {
-    console.error("❌ Error fetching subscription:", error);
-    res.status(500).json({
-      success: false,
-      message: "Something went wrong while fetching subscription",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
+    console.error("Failed to get subscription:", error);
+    res
+      .status(500)
+      .json({ msg: "Failed to get subscription", error: error.message });
   }
 }
